@@ -2,18 +2,10 @@ import socket
 import os
 import sys
 import time
+import argparse
 
 
 def cls(): return os.system('cls')
-
-
-def print_help():
-    print("You must provide 2 parameters:")
-    print("1) ip address or hostname")
-    print("2) ports to scan (20,21,22-25,80-100,443")
-    print("Example: main.py scanme.nmap.org 1 1024")
-    print("Argument given are:", sys.argv[1:])
-    sys.exit()
 
 
 def scan_host(host, ports_to_scan):
@@ -34,9 +26,8 @@ def scan_host(host, ports_to_scan):
     except:
         fqdn = host
 
-    
     print("Starting port scan of host: {}({})".format(host, fqdn))
-    
+
     # this is to get the execution time
     startTime = time.time()
 
@@ -57,6 +48,8 @@ def scan_host(host, ports_to_scan):
     return openPorts
 
 # function to get a nice list of ports to scan from the terminal argument
+
+
 def inflatePortList(portlist_raw_string):
     range_min_max = []
     inflated_port_list = []
@@ -80,26 +73,40 @@ def inflatePortList(portlist_raw_string):
     # for every range to create
     for range_to_create in range_min_max:
         min, max = int(range_to_create[0]), int(range_to_create[1])
-        
-        for port in range(min,max+1):
+
+        for port in range(min, max+1):
             if port >= 0 and port <= 65535:
                 inflated_port_list.append(port)
-    
+
     # remove duplicates and sort the list
     inflated_port_list = sorted(set(inflated_port_list))
 
     return(inflated_port_list)
 
+
 def main():
-    # checking if the arguments are enough
-    if len(sys.argv) != 3:
-        print_help()
+
+    parser_usage = '''Usage:
+    main.py -p21 192.168.1.1
+    main.py -p21,80-90 192.168.1.1
+    main.py -p 21,80-90 192.168.1.1
+    main.py --port 21 192.168.1.1
+    main.py --port 21,80-90 192.168.1.1
+    main.py --port 21,80-90 192.168.1.1
+    \nEnjoy'''
+
+    parser = argparse.ArgumentParser(
+        description="A simple port scanner tool", usage=parser_usage)
+    parser.add_argument("ipaddress", help="The IP address you want to scan")
+    parser.add_argument(
+        "-p", "--port", help="A list of ports to scan", required=True, dest="ports", action="store",)
+    args = parser.parse_args()
 
     cls()
 
-    ports_to_scan = inflatePortList(sys.argv[2])
+    ports_to_scan = inflatePortList(args.ports)
     if len(ports_to_scan):
-        openPorts = scan_host(sys.argv[1], ports_to_scan)
+        openPorts = scan_host(args.ipaddress, ports_to_scan)
         print("Found {} ports open".format(len(openPorts)))
         if len(openPorts) >= 1:
             print("Port \t Service Name")
