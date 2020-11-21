@@ -26,7 +26,7 @@ def scan_host(host, ports_to_scan):
     except:
         fqdn = host
 
-    print("Starting port scan of host: {}({})".format(host, fqdn))
+    print("Starting port scan of host: {} ({})".format(host, fqdn))
 
     # this is to get the execution time
     startTime = time.time()
@@ -100,11 +100,16 @@ def main():
     parser.add_argument("ipaddress", help="The IP address you want to scan")
     parser.add_argument(
         "-p", "--port", help="A list of ports to scan", required=True, dest="ports", action="store",)
+    # printing help if no argument given
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
     args = parser.parse_args()
 
     cls()
 
     ports_to_scan = inflatePortList(args.ports)
+
     if len(ports_to_scan):
         openPorts = scan_host(args.ipaddress, ports_to_scan)
         print("Found {} ports open".format(len(openPorts)))
@@ -112,8 +117,6 @@ def main():
             print("Port \t Service Name")
             for port, serviceName in openPorts:
                 print(port, "\t", serviceName)
-        else:
-            print("No valid ports found")
 
 
 if __name__ == '__main__':
