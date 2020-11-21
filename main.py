@@ -101,14 +101,10 @@ def main(arguments):
 
 if __name__ == '__main__':
 
-    parser_usage = '''Usage:
-    main.py -p21 192.168.1.1
-    main.py -p21,80-90 192.168.1.1
+    parser_usage = '''main.py -p 21 192.168.1.1
     main.py -p 21,80-90 192.168.1.1
     main.py --port 21 192.168.1.1
-    main.py --port 21,80-90 192.168.1.1
-    main.py --port 21,80-90 192.168.1.1
-    \nEnjoy'''
+    main.py --port 21,80-90 192.168.1.1'''
 
     parser = argparse.ArgumentParser(
         description="A simple port scanner tool", usage=parser_usage)
