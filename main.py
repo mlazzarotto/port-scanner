@@ -9,6 +9,7 @@ def cls(): return os.system('cls')
 
 
 def scan_host(host, ports_to_scan):
+    """Scans a host to check if the given ports are open"""
     # list of port and relative service name
     openPorts = []
     socket.setdefaulttimeout(0.01)
@@ -47,10 +48,9 @@ def scan_host(host, ports_to_scan):
     print("Scan finished in {} seconds\n".format(executionTime))
     return openPorts
 
-# function to get a nice list of ports to scan from the terminal argument
-
 
 def inflatePortList(portlist_raw_string):
+    """Take a string with ports and splits into single port, then calculates the range of ports to check"""
     range_min_max = []
     inflated_port_list = []
 
