@@ -84,7 +84,22 @@ def inflatePortList(portlist_raw_string):
     return(inflated_port_list)
 
 
-def main():
+def main(arguments):
+
+    cls()
+
+    ports_to_scan = inflatePortList(arguments.ports)
+
+    if len(ports_to_scan):
+        openPorts = scan_host(arguments.ipaddress, ports_to_scan)
+        print("Found {} ports open".format(len(openPorts)))
+        if len(openPorts) >= 1:
+            print("Port \t Service Name")
+            for port, serviceName in openPorts:
+                print(port, "\t", serviceName)
+
+
+if __name__ == '__main__':
 
     parser_usage = '''Usage:
     main.py -p21 192.168.1.1
@@ -104,24 +119,11 @@ def main():
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
-    args = parser.parse_args()
+    arguments = parser.parse_args()
 
-    cls()
-
-    ports_to_scan = inflatePortList(args.ports)
-
-    if len(ports_to_scan):
-        openPorts = scan_host(args.ipaddress, ports_to_scan)
-        print("Found {} ports open".format(len(openPorts)))
-        if len(openPorts) >= 1:
-            print("Port \t Service Name")
-            for port, serviceName in openPorts:
-                print(port, "\t", serviceName)
-
-
-if __name__ == '__main__':
     try:
-        main()
+        main(arguments)
+
     # in case of CTRL+C pressed
     except KeyboardInterrupt:
         print('Interrupted')
