@@ -5,124 +5,121 @@ import time
 import argparse
 
 
-def cls(): return os.system('cls')
+class PScan:
+    def __init__(self):
+        self.ports_to_scan = []
+        self.open_ports = []
+        self.portlist_raw_string = ""
+        self.remote_host = ""
+        self.remote_host_fqdn = ""
+        self.remote_ip = ""
 
+    def get_ports(self, portlist_raw_string):
+        """Take a string with ports and splits into single port, then calculates the range of ports to check"""
+        range_min_max = []
+        inflated_port_list = []
 
-def scan_host(host, ports_to_scan):
-    """Scans a host to check if the given ports are open"""
-    # list of port and relative service name
-    openPorts = []
-    socket.setdefaulttimeout(0.01)
+        portlist_raw_list = portlist_raw_string.split(',')
 
-    # trying to obtain the ip address
-    try:
-        ip = socket.gethostbyname(host)
-    except:
-        print("Error: ip invalid or can't resolve the host name in IP address!")
-        sys.exit()
+        # for every port number in the list
+        for port in portlist_raw_list:
+            if port != '':
+                # if the dash symbol is present, it's a range
+                if (port.find("-") != -1):
+                    # adding the range of ports in a list
+                    range_min_max.append(port.split('-'))
+                else:
+                    # if the port doesn't contain letters
+                    if port.isdigit():
+                        port = int(port)
+                        if port >= 0 and port <= 65535:
+                            inflated_port_list.append(port)
 
-    # trying to obtain the FQDN
-    try:
-        fqdn = socket.getfqdn(host)
-    except:
-        fqdn = host
+        # for every range to create
+        for range_to_create in range_min_max:
+            min, max = int(range_to_create[0]), int(range_to_create[1])
 
-    print("Starting port scan of host: {} ({})".format(host, fqdn))
+            for port in range(min, max+1):
+                if port >= 0 and port <= 65535:
+                    inflated_port_list.append(port)
 
-    # this is to get the execution time
-    startTime = time.time()
+        # remove duplicates and sort the list
+        inflated_port_list = sorted(set(inflated_port_list))
+        return inflated_port_list
 
-    for port in ports_to_scan:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # if the port is open
-        if not sock.connect_ex((ip, port)):
-            try:
-                # get the service name for the port
-                serviceName = socket.getservbyport(port, "tcp")
-            except:
-                serviceName = ""
-            openPorts.append((port, serviceName))
-        sock.close()
+    def scan_host(self, remote_host, ports_to_scan):
+        """Scans a host to check if the given ports are open"""
+        # list of port and relative service name
+        openPorts = []
+        socket.setdefaulttimeout(0.01)
 
-    executionTime = round((time.time() - startTime), 2)
-    print("Scan finished in {} seconds\n".format(executionTime))
-    return openPorts
+        # trying to obtain the ip address
+        try:
+            ip = socket.gethostbyname(remote_host)
+        except:
+            print("Error: ip invalid or can't resolve the host name in IP address!")
+            sys.exit()
 
+        # trying to obtain the FQDN
+        try:
+            fqdn = socket.getfqdn(remote_host)
+        except:
+            fqdn = remote_host
 
-def inflatePortList(portlist_raw_string):
-    """Take a string with ports and splits into single port, then calculates the range of ports to check"""
-    range_min_max = []
-    inflated_port_list = []
+        print("Starting port scan of host: {} ({})".format(remote_host, fqdn))
 
-    portlist_raw_list = portlist_raw_string.split(',')
+        # this is to get the execution time
+        startTime = time.time()
 
-    # for every port number in the list
-    for port in portlist_raw_list:
-        if port != '':
-            # if the dash symbol is present, it's a range
-            if (port.find("-") != -1):
-                # adding the range of ports in a list
-                range_min_max.append(port.split('-'))
-            else:
-                # if the port doesn't contain letters
-                if port.isdigit():
-                    port = int(port)
-                    if port >= 0 and port <= 65535:
-                        inflated_port_list.append(port)
+        for port in self.ports_to_scan:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # if the port is open
+            if not sock.connect_ex((ip, port)):
+                try:
+                    # get the service name for the port
+                    serviceName = socket.getservbyport(port, "tcp")
+                except:
+                    serviceName = ""
+                openPorts.append((port, serviceName))
+            sock.close()
 
-    # for every range to create
-    for range_to_create in range_min_max:
-        min, max = int(range_to_create[0]), int(range_to_create[1])
+        executionTime = round((time.time() - startTime), 2)
+        print("Scan finished in {} seconds\n".format(executionTime))
+        return openPorts
 
-        for port in range(min, max+1):
-            if port >= 0 and port <= 65535:
-                inflated_port_list.append(port)
+    def initialize(self):
+        self.ports_to_scan = self.get_ports(self.portlist_raw_string)
+        if len(self.ports_to_scan):
+            self.open_ports = self.scan_host(
+                self.remote_host, self.ports_to_scan)
+            print("Found {} ports open".format(len(self.open_ports)))
+            if len(self.open_ports) >= 1:
+                print("Port \t Service Name")
+                for port, serviceName in self.open_ports:
+                    print(port, "\t", serviceName)
 
-    # remove duplicates and sort the list
-    inflated_port_list = sorted(set(inflated_port_list))
+    def parse_args(self):
+        parser_usage = '''main.py -p 21 192.168.1.1
+        main.py -p 21,80-90 192.168.1.1
+        main.py --port 21 192.168.1.1
+        main.py --port 21,80-90 192.168.1.1'''
 
-    return(inflated_port_list)
+        parser = argparse.ArgumentParser(
+            description="A simple port scanner tool", usage=parser_usage)
+        parser.add_argument(
+            "ipaddress", help="The IP address you want to scan")
+        parser.add_argument(
+            "-p", "--port", help="A list of ports to scan", required=True, dest="ports_to_scan", action="store",)
+        # printing help if no argument given
+        if len(sys.argv) == 1:
+            parser.print_help()
+            sys.exit(1)
 
-
-def main(arguments):
-
-    cls()
-
-    ports_to_scan = inflatePortList(arguments.ports)
-
-    if len(ports_to_scan):
-        openPorts = scan_host(arguments.ipaddress, ports_to_scan)
-        print("Found {} ports open".format(len(openPorts)))
-        if len(openPorts) >= 1:
-            print("Port \t Service Name")
-            for port, serviceName in openPorts:
-                print(port, "\t", serviceName)
+        arguments = parser.parse_args()
+        self.remote_host, self.portlist_raw_string = arguments.ipaddress, arguments.ports_to_scan
 
 
 if __name__ == '__main__':
-
-    parser_usage = '''main.py -p 21 192.168.1.1
-    main.py -p 21,80-90 192.168.1.1
-    main.py --port 21 192.168.1.1
-    main.py --port 21,80-90 192.168.1.1'''
-
-    parser = argparse.ArgumentParser(
-        description="A simple port scanner tool", usage=parser_usage)
-    parser.add_argument("ipaddress", help="The IP address you want to scan")
-    parser.add_argument(
-        "-p", "--port", help="A list of ports to scan", required=True, dest="ports", action="store",)
-    # printing help if no argument given
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(1)
-    arguments = parser.parse_args()
-
-    try:
-        main(arguments)
-
-    # in case of CTRL+C pressed
-    except KeyboardInterrupt:
-        print('Interrupted')
-        os._exit(0)
-    except Exception as e:
-        print(e)
+    pscan = PScan()
+    pscan.parse_args()
+    pscan.initialize()
