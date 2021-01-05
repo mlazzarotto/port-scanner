@@ -1,21 +1,25 @@
+from concurrent.futures.thread import ThreadPoolExecutor
 import socket
 import os
 import sys
 import time
 import argparse
+import concurrent.futures
 
 
 class PScan:
     def __init__(self):
-        self.ports_to_scan = []
         self.open_ports = []
         self.portlist_raw_string = ""
         self.remote_host = ""
         self.remote_host_fqdn = ""
         self.remote_ip = ""
+        self.number_of_open_ports = 0
 
     def get_ports(self, portlist_raw_string):
-        """Take a string with ports and splits into single port, then calculates the range of ports to check"""
+        """
+        Take a string with ports and splits into single port, then calculates the range of ports to check
+        """
         range_min_max = []
         inflated_port_list = []
 
@@ -47,11 +51,28 @@ class PScan:
         inflated_port_list = sorted(set(inflated_port_list))
         return inflated_port_list
 
+    def scan_port(self, remote_host, port):
+        """
+        New function to scan ports
+        """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.1)
+        # if port is open
+        if not sock.connect_ex((remote_host, port)):
+            try:
+                # get the service name for the port
+                serviceName = socket.getservbyport(port, "tcp")
+            except:
+                serviceName = ""
+
+            sock.close()
+            self.number_of_open_ports += 1
+            print(port, "\t", serviceName)
+
     def scan_host(self, remote_host, ports_to_scan):
-        """Scans a host to check if the given ports are open"""
-        # list of port and relative service name
-        openPorts = []
-        socket.setdefaulttimeout(0.01)
+        """
+        Scans a host to check if the given ports are open
+        """
 
         # trying to obtain the ip address
         try:
@@ -71,32 +92,24 @@ class PScan:
         # this is to get the execution time
         startTime = time.time()
 
-        for port in self.ports_to_scan:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # if the port is open
-            if not sock.connect_ex((ip, port)):
-                try:
-                    # get the service name for the port
-                    serviceName = socket.getservbyport(port, "tcp")
-                except:
-                    serviceName = ""
-                openPorts.append((port, serviceName))
-            sock.close()
+        # using multithreading to scan multiple ports simultaneously
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1000) as executor:
+            {executor.submit(self.scan_port, remote_host, port): port for port in ports_to_scan}
 
+        # i wait for all the threads to complete
+        executor.shutdown(wait=True)
+        # calculating execution time
         executionTime = round((time.time() - startTime), 2)
-        print("Scan finished in {} seconds\n".format(executionTime))
-        return openPorts
+
+        # printing some info
+        print("\nScan finished in {} seconds".format(executionTime))
+        print("Found {} open ports!".format(self.number_of_open_ports))
 
     def initialize(self):
         self.ports_to_scan = self.get_ports(self.portlist_raw_string)
         if len(self.ports_to_scan):
             self.open_ports = self.scan_host(
                 self.remote_host, self.ports_to_scan)
-            print("Found {} ports open".format(len(self.open_ports)))
-            if len(self.open_ports) >= 1:
-                print("Port \t Service Name")
-                for port, serviceName in self.open_ports:
-                    print(port, "\t", serviceName)
 
     def parse_args(self):
         parser_usage = '''main.py -p 21 192.168.1.1
