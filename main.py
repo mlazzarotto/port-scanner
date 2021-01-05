@@ -93,8 +93,9 @@ class PScan:
         startTime = time.time()
 
         # using multithreading to scan multiple ports simultaneously
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1000) as executor:
-            {executor.submit(self.scan_port, remote_host, port): port for port in ports_to_scan}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            {executor.submit(self.scan_port, remote_host, port)
+                             : port for port in ports_to_scan}
 
         # i wait for all the threads to complete
         executor.shutdown(wait=True)
@@ -123,7 +124,9 @@ class PScan:
         parser.add_argument(
             "-p", "--port", help="A list of ports to scan", required=True, dest="ports_to_scan", action="store")
         parser.add_argument(
-            "-t", "--timeout", help="Timeout to check if port is open", required=False, dest="timeout", action="store", default=0.1)
+            "-t", "--timeout", help="Timeout to check if port is open (Default 0.1)", required=False, dest="timeout", action="store", default=0.1)
+        parser.add_argument(
+            "-w", "--workers", help="Maximum number of workers to use for multithreading (Default 1000)", required=False, dest="max_workers", action="store", default=1000)
 
         # printing help if no argument given
         if len(sys.argv) == 1:
@@ -134,6 +137,7 @@ class PScan:
         self.remote_host = arguments.ipaddress
         self.portlist_raw_string = arguments.ports_to_scan
         self.timeout = arguments.timeout
+        self.max_workers = int(arguments.max_workers)
 
 
 if __name__ == '__main__':
