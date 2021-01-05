@@ -2,7 +2,7 @@
 <h3 align="center">Port Scanner</h3>
 
   <p align="center">
-    A simple TCP port scanner written in Python 3
+    A simple multithreaded TCP port scanner written in Python 3
 </p>
 
 ## Table of Contents
@@ -38,3 +38,12 @@ python main.py -p 80,20-25,443 192.168.1.1
 ```sh
 python main.py --port 80,20-25,443 192.168.1.1
 ```
+
+```sh
+python main.py --port 80,20-25,443 -t 0.2 192.168.1.1
+```
+
+```sh
+python main.py --port 80,20-25,443 -w 1000 192.168.1.1
+```
+
